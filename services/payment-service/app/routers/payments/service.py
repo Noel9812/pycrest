@@ -1,23 +1,27 @@
 """
 services/payment-service/app/routers/payments/service.py
 
-Mock payment gateway with robust wallet credit that falls back to direct DB write.
+Fixes:
+- _credit_direct_db: handles ObjectId _id in transactions (was crashing with TypeError)
+- _credit_via_internal_api: correct URL without /api/wallet prefix
 """
 import httpx
+import logging
+import time
 from datetime import datetime
 from uuid import uuid4
 from ...database.mongo import get_db
 from ...core.config import settings
 from fastapi import HTTPException
-import logging
 
 logger = logging.getLogger(__name__)
 
 
-async def _credit_via_internal_api(customer_id: str | int, amount: float, description: str) -> dict | None:
-    """Try to credit via wallet-service internal API."""
+async def _credit_via_internal_api(customer_id, amount: float, description: str):
+    """Try to credit via wallet-service internal API directly (not via gateway)."""
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
+            # Direct call to wallet-service — no /api/wallet prefix
             url = f"{settings.WALLET_SERVICE_URL}/internal/credit"
             headers = {
                 "X-Internal-Token": settings.INTERNAL_SERVICE_TOKEN,
@@ -38,7 +42,32 @@ async def _credit_via_internal_api(customer_id: str | int, amount: float, descri
         return None
 
 
-async def _credit_direct_db(customer_id: str | int, amount: float, description: str) -> dict:
+async def _next_numeric_txn_id(db) -> int:
+    """
+    Find the next transaction ID using only numeric _id values.
+    The transactions collection may have ObjectId _ids from document inserts,
+    so we must filter to numeric types only.
+    """
+    try:
+        # MongoDB $type 16 = int32, 18 = int64, 1 = double
+        cursor = db.transactions.find(
+            {"_id": {"$type": ["int", "long", "double"]}},
+            sort=[("_id", -1)],
+            limit=1,
+        )
+        async for doc in cursor:
+            raw = doc.get("_id")
+            try:
+                return int(raw) + 1
+            except (TypeError, ValueError):
+                pass
+    except Exception:
+        pass
+    # Fallback: use millisecond timestamp to avoid collision
+    return int(time.time() * 1000) % 2_000_000_000
+
+
+async def _credit_direct_db(customer_id, amount: float, description: str) -> dict:
     """Direct DB credit as fallback when wallet service is unavailable."""
     db = await get_db()
     now = datetime.utcnow()
@@ -67,9 +96,9 @@ async def _credit_direct_db(customer_id: str | int, amount: float, description: 
             {"$inc": {"balance": float(amount)}, "$set": {"updated_at": now}},
         )
 
-    # Record transaction
-    last_txn = await db.transactions.find_one({}, sort=[("_id", -1)])
-    txn_id = (int(last_txn.get("_id") or 0) + 1) if last_txn else 1
+    # Get next safe numeric ID
+    txn_id = await _next_numeric_txn_id(db)
+
     txn = {
         "_id": txn_id,
         "transaction_id": txn_id,
@@ -79,29 +108,36 @@ async def _credit_direct_db(customer_id: str | int, amount: float, description: 
         "description": description,
         "created_at": now,
     }
-    await db.transactions.insert_one(txn)
-    logger.info(f"[PAYMENT] Direct DB credit: customer={customer_id} amount={amount}")
+    try:
+        await db.transactions.insert_one(txn)
+    except Exception:
+        # Duplicate key — try with timestamp-based id
+        txn_id = int(time.time() * 1000)
+        txn["_id"] = txn_id
+        txn["transaction_id"] = txn_id
+        await db.transactions.insert_one(txn)
+
+    logger.info(f"[PAYMENT] Direct DB credit: customer={customer_id} amount={amount} txn_id={txn_id}")
     return {"success": True, "transaction_id": txn_id, "amount": amount, "direct_db": True}
 
 
-async def credit_wallet(customer_id: str | int, amount: float, description: str) -> dict:
-    """Credit wallet — tries API first, falls back to direct DB."""
+async def credit_wallet(customer_id, amount: float, description: str) -> dict:
+    """Credit wallet — tries internal API first, falls back to direct DB."""
     result = await _credit_via_internal_api(customer_id, amount, description)
     if result:
         return result
-    # Fallback to direct DB write
     return await _credit_direct_db(customer_id, amount, description)
 
 
-async def add_money(customer_id: str | int, amount: float):
+async def add_money(customer_id, amount: float):
     return await credit_wallet(customer_id, amount, "Add money")
 
 
-async def verify_mpin(customer_id: str | int, mpin: str):
+async def verify_mpin(customer_id, mpin: str):
     return {"verified": True}
 
 
-async def get_wallet_balance(customer_id: str | int) -> dict:
+async def get_wallet_balance(customer_id) -> dict:
     try:
         async with httpx.AsyncClient(timeout=5.0) as client:
             url = f"{settings.WALLET_SERVICE_URL}/internal/balance/{customer_id}"
@@ -111,7 +147,6 @@ async def get_wallet_balance(customer_id: str | int) -> dict:
                 return resp.json()
     except Exception:
         pass
-    # Fallback: read directly from DB
     db = await get_db()
     cid_int = None
     try:

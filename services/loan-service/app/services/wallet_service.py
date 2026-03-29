@@ -1,20 +1,19 @@
-# loan-service/app/services/wallet_service.py
-#
-# loan/customer.py imports debit_wallet from here to deduct EMI payments
-# from a customer's wallet. In microservices this must be an HTTP call
-# to wallet-service rather than a direct DB operation.
+"""
+services/loan-service/app/services/wallet_service.py
 
+Calls wallet-service DIRECTLY (not via gateway).
+WALLET_SERVICE_URL = http://localhost:3004
+Internal routes on wallet-service are registered at /internal/...
+So correct URL is: http://localhost:3004/internal/debit (NOT /api/wallet/internal/debit)
+"""
 import httpx
 from fastapi import HTTPException
 from ..core.config import settings
 
 
 async def debit_wallet(customer_id, amount: float, description: str = "EMI payment") -> dict:
-    """
-    Debit the customer's wallet for EMI payment.
-    Calls wallet-service via HTTP instead of touching the DB directly.
-    """
-    url = f"{settings.WALLET_SERVICE_URL}/api/wallet/internal/debit"
+    # Direct call to wallet-service — no gateway prefix needed
+    url = f"{settings.WALLET_SERVICE_URL}/internal/debit"
     payload = {
         "customer_id": str(customer_id),
         "amount": float(amount),
@@ -40,8 +39,8 @@ async def debit_wallet(customer_id, amount: float, description: str = "EMI payme
 
 
 async def get_wallet_balance(customer_id) -> float:
-    """Get customer wallet balance from wallet-service."""
-    url = f"{settings.WALLET_SERVICE_URL}/api/wallet/internal/balance/{customer_id}"
+    # Direct call to wallet-service — no gateway prefix needed
+    url = f"{settings.WALLET_SERVICE_URL}/internal/balance/{customer_id}"
     headers = {"X-Internal-Token": settings.INTERNAL_SERVICE_TOKEN}
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:

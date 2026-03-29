@@ -21,8 +21,10 @@ const formatINR = (v?: number) =>
 
 const getNextAction = (status?: string): { action: NextAction; label: string } | null => {
   const s = normalizeStatus(status);
-  if (s === "pending_admin_approval") return { action: "approve", label: "Approve" };
-  if (s === "admin_approved" || s === "manager_approved") return { action: "sanction", label: "Send Sanction" };
+  if (s === "pending_admin_approval" || s === "verification_done" || s === "manager_approved") {
+    return { action: "approve", label: "Approve" };
+  }
+  if (s === "admin_approved") return { action: "sanction", label: "Send Sanction" };
   if (s === "sanction_sent") return { action: "signed", label: "Mark Signed" };
   if (s === "ready_for_disbursement") return { action: "disburse", label: "Disburse" };
   return null;
@@ -55,7 +57,7 @@ export default function ApprovalsTab({
   const [queueView, setQueueView] = useState<"pending" | "completed">("pending");
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState<"all" | "personal" | "vehicle" | "education" | "home">("all");
-  const [filterStatus, setFilterStatus] = useState<"all" | "pending_admin_approval" | "manager_approved" | "admin_approved" | "sanction_sent" | "signed_received" | "ready_for_disbursement">("all");
+  const [filterStatus, setFilterStatus] = useState<string>("all");
   const [sortBy, setSortBy] = useState<"applied_at" | "loan_amount" | "loan_id">("applied_at");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [page, setPage] = useState(1);

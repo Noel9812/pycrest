@@ -1,11 +1,14 @@
-
+"""
+services/manager-service/app/routers/manager/router.py
+"""
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
-from ...core.security import require_roles
-from ...models.enums import Roles, LoanCollection
 from pydantic import BaseModel
+from typing import Optional
 import io
 
+from ...core.security import require_roles
+from ...models.enums import Roles, LoanCollection
 from .service import (
     get_loans_for_manager,
     list_pending_signature_verifications,
@@ -21,7 +24,22 @@ from .service import (
 
 router = APIRouter(prefix="", tags=["manager"])
 
-@router.get('/loans')
+
+# ── Pydantic models ───────────────────────────────────────────────────────────
+
+class SignatureVerifyPayload(BaseModel):
+    approve: bool
+    remarks: Optional[str] = None
+
+
+class ForwardToAdminPayload(BaseModel):
+    recommendation: Optional[str] = None
+    remarks: Optional[str] = None
+
+
+# ── Routes ────────────────────────────────────────────────────────────────────
+
+@router.get("/loans")
 async def list_loans(user=Depends(require_roles(Roles.MANAGER))):
     return await get_loans_for_manager()
 
@@ -30,17 +48,33 @@ async def list_loans(user=Depends(require_roles(Roles.MANAGER))):
 async def get_verification_team(active_only: bool = True, user=Depends(require_roles(Roles.MANAGER))):
     return await list_verification_team(active_only=active_only)
 
-@router.put('/assign-verification/{loan_collection}/{loan_id}/{verification_id}')
-async def assign_verification_route(loan_collection: LoanCollection, loan_id: str, verification_id: str, user=Depends(require_roles(Roles.MANAGER))):
+
+@router.put("/assign-verification/{loan_collection}/{loan_id}/{verification_id}")
+async def assign_verification_route(
+    loan_collection: LoanCollection,
+    loan_id: str,
+    verification_id: str,
+    user=Depends(require_roles(Roles.MANAGER)),
+):
     return await assign_verification(loan_collection.value, loan_id, verification_id, user["_id"])
 
-@router.put('/approve/{loan_collection}/{loan_id}')
-async def approve_route(loan_collection: LoanCollection, loan_id: str, user=Depends(require_roles(Roles.MANAGER))):
-    return await manager_approve_or_reject(loan_collection.value, loan_id, user['_id'], True)
 
-@router.put('/reject/{loan_collection}/{loan_id}')
-async def reject_route(loan_collection: LoanCollection, loan_id: str, user=Depends(require_roles(Roles.MANAGER))):
-    return await manager_approve_or_reject(loan_collection.value, loan_id, user['_id'], False)
+@router.put("/approve/{loan_collection}/{loan_id}")
+async def approve_route(
+    loan_collection: LoanCollection,
+    loan_id: str,
+    user=Depends(require_roles(Roles.MANAGER)),
+):
+    return await manager_approve_or_reject(loan_collection.value, loan_id, user["_id"], True)
+
+
+@router.put("/reject/{loan_collection}/{loan_id}")
+async def reject_route(
+    loan_collection: LoanCollection,
+    loan_id: str,
+    user=Depends(require_roles(Roles.MANAGER)),
+):
+    return await manager_approve_or_reject(loan_collection.value, loan_id, user["_id"], False)
 
 
 @router.get("/sanction-letters/pending-verification")
@@ -48,101 +82,74 @@ async def pending_signature_verifications(user=Depends(require_roles(Roles.MANAG
     return await list_pending_signature_verifications()
 
 
-class SignatureVerifyPayload(BaseModel):
-    approve: bool
-    remarks: str | None = None
-
-
 @router.post("/sanction-letters/{loan_id}/verify-signature")
-async def verify_signature_route(loan_id: str, payload: SignatureVerifyPayload, user=Depends(require_roles(Roles.MANAGER))):
+async def verify_signature_route(
+    loan_id: str,
+    payload: SignatureVerifyPayload,
+    user=Depends(require_roles(Roles.MANAGER)),
+):
     return await manager_verify_signed_sanction(loan_id, user["_id"], payload.approve, payload.remarks)
 
+
 @router.get("/loans/{loan_id}/sanction-letter")
-async def download_sanction_letter_for_manager(loan_id: str, user=Depends(require_roles(Roles.MANAGER))):
+async def download_sanction_letter_for_manager(
+    loan_id: str,
+    user=Depends(require_roles(Roles.MANAGER)),
+):
     loan_collection, loan = await find_loan_any(loan_id)
     if not loan_collection or not loan:
         raise HTTPException(status_code=404, detail="Loan not found")
-
     doc_id = loan.get("sanction_letter_document_id")
     if not doc_id:
         raise HTTPException(status_code=404, detail="Sanction letter not generated yet")
-
     doc = await get_document_binary(str(doc_id))
     return StreamingResponse(
         io.BytesIO(doc["data"]),
         media_type=doc["content_type"],
-        headers={"Content-Disposition": f'inline; filename="{doc["filename"]}"'},
+        headers={"Content-Disposition": f'inline; filename="sanction_letter_{loan_id}.pdf"'},
     )
 
 
 @router.get("/loans/{loan_id}/signed-sanction-letter")
-async def download_signed_sanction_letter_for_manager(loan_id: str, user=Depends(require_roles(Roles.MANAGER))):
+async def download_signed_sanction_letter_for_manager(
+    loan_id: str,
+    user=Depends(require_roles(Roles.MANAGER)),
+):
     loan_collection, loan = await find_loan_any(loan_id)
     if not loan_collection or not loan:
         raise HTTPException(status_code=404, detail="Loan not found")
-
     doc_id = loan.get("signed_sanction_letter_document_id")
     if not doc_id:
         raise HTTPException(status_code=404, detail="Signed sanction letter not uploaded yet")
-
     doc = await get_document_binary(str(doc_id))
     return StreamingResponse(
         io.BytesIO(doc["data"]),
         media_type=doc["content_type"],
-        headers={"Content-Disposition": f'inline; filename="{doc["filename"]}"'},
+        headers={"Content-Disposition": f'inline; filename="signed_sanction_{loan_id}.pdf"'},
     )
-
-
-class ForwardToAdminPayload(BaseModel):
-    recommendation: str | None = None
-    remarks: str | None = None
 
 
 @router.post("/loans/{loan_id}/forward-to-admin")
-async def forward_to_admin_route(loan_id: str, payload: ForwardToAdminPayload, user=Depends(require_roles(Roles.MANAGER))):
-    loan_collection, loan = await find_loan_any(loan_id)
-    if not loan_collection or not loan:
-        return {"error": "Loan not found"}
-    return await manager_forward_to_admin(loan_collection, loan_id, user["_id"], payload.recommendation, payload.remarks)
-
-
-@router.get('/customers/{customer_id}/eligibility')
-async def customer_eligibility(customer_id: str, user=Depends(require_roles(Roles.MANAGER))):
-    return await compute_customer_eligibility(customer_id)
-
-
-@router.get("/loans/{loan_id}/documents/{doc_type}")
-async def download_loan_document_for_manager(loan_id: str, doc_type: str, user=Depends(require_roles(Roles.MANAGER))):
+async def forward_to_admin_route(
+    loan_id: str,
+    payload: ForwardToAdminPayload,
+    user=Depends(require_roles(Roles.MANAGER)),
+):
     loan_collection, loan = await find_loan_any(loan_id)
     if not loan_collection or not loan:
         raise HTTPException(status_code=404, detail="Loan not found")
-
-    field_map = {
-        "pay_slip": "pay_slip",
-        "vehicle_price_doc": "vehicle_price_doc",
-        "home_property_doc": "home_property_doc",
-        "fees_structure": "fees_structure",
-        "bonafide_certificate": "bonafide_certificate",
-        "collateral_doc": "collateral_doc",
-    }
-    field = field_map.get(doc_type)
-    if not field:
-        raise HTTPException(status_code=400, detail="Unsupported document type")
-
-    raw_value = loan.get(field)
-    if not raw_value:
-        raise HTTPException(status_code=404, detail="Document not uploaded")
-
-    # Legacy rows may store external paths/URLs; manager review expects stored binary docs by id.
-    if isinstance(raw_value, str) and (raw_value.startswith("http://") or raw_value.startswith("https://") or raw_value.startswith("/")):
-        raise HTTPException(status_code=404, detail="Document binary not available")
-
-    doc_id = str(raw_value)
-    doc = await get_document_binary(doc_id)
-    return StreamingResponse(
-        io.BytesIO(doc["data"]),
-        media_type=doc["content_type"],
-        headers={"Content-Disposition": f'inline; filename="{doc["filename"]}"'},
+    return await manager_forward_to_admin(
+        loan_collection,
+        loan_id,
+        user["_id"],
+        payload.recommendation,
+        payload.remarks,
     )
 
 
+@router.get("/customer/{customer_id}/eligibility")
+async def customer_eligibility(
+    customer_id: str,
+    user=Depends(require_roles(Roles.MANAGER)),
+):
+    return await compute_customer_eligibility(customer_id)
