@@ -141,6 +141,20 @@ export default function AddMoneyModal({
     return amt;
   };
 
+  /**
+ * PATCH for frontend/src/components/AddMoneyModal.tsx
+ *
+ * Replace the startCreditCheckout function (lines ~116-145) with this version.
+ * It detects mock payment sessions and skips the Cashfree SDK entirely,
+ * instead storing the pending order and relying on useCashfreeOrderConfirmation
+ * to auto-confirm it (which calls our mock /confirm endpoint).
+ *
+ * FIND this function in AddMoneyModal.tsx:
+ *   const startCreditCheckout = async (amt: number) => {
+ *
+ * REPLACE the entire function body with the code below.
+ */
+
   const startCreditCheckout = async (amt: number) => {
     setLoading(true);
     setError(null);
@@ -150,13 +164,13 @@ export default function AddMoneyModal({
         amount: amt,
         description: "Wallet top-up",
       });
-
       const orderId = String((cf as any)?.order_id || "");
       const paymentLink = (cf as any)?.payment_link as string | undefined | null;
       const paymentSessionId = (cf as any)?.payment_session_id as string | undefined | null;
 
-      if (!orderId) throw new Error("Cashfree order creation failed (missing order_id)");
+      if (!orderId) throw new Error("Payment order creation failed (missing order_id)");
 
+      // Store pending order for auto-confirmation hook
       try {
         const session = getSession();
         sessionStorage.setItem(
@@ -173,12 +187,29 @@ export default function AddMoneyModal({
         // ignore storage failures
       }
 
+      // MOCK MODE: if payment_session_id starts with "mock_" or is null/dummy,
+      // skip Cashfree SDK and close the modal — the confirmation hook will auto-fire
+      const isMockSession =
+        !paymentSessionId ||
+        paymentSessionId === "dummy_session" ||
+        String(paymentSessionId).startsWith("mock_");
+
+      if (isMockSession) {
+        // Close modal — useCashfreeOrderConfirmation hook will auto-confirm
+        setShowCashfreeBridge(false);
+        onClose();
+        return;
+      }
+
+      // Real payment link — redirect
       if (paymentLink) {
         setShowCashfreeBridge(false);
         onClose();
         window.location.assign(paymentLink);
         return;
       }
+
+      // Real Cashfree session — open SDK checkout
       if (paymentSessionId) {
         setShowCashfreeBridge(false);
         onClose();
@@ -186,7 +217,7 @@ export default function AddMoneyModal({
         return;
       }
 
-      throw new Error("Cashfree order created but no payment link/session was returned");
+      throw new Error("Payment order created but no payment session was returned");
     } catch (err) {
       setShowCashfreeBridge(false);
       setError(formatWalletErrorMessage(err));

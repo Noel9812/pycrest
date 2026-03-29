@@ -97,7 +97,7 @@ for svc_name, svc_info in SERVICES.items():
     # ENV
     env_content = f"""SERVICE_NAME={svc_name}
 PORT={port}
-MONGO_URI=mongodb://pycrest:pycrest123@localhost:27017/pycrest
+MONGO_URI=mongodb://pycrest:pycrest123@localhost:27017/pycrest?authSource=admin
 MONGO_DB_NAME=pycrest
 SECRET_KEY=pycrest_jwt_secret_devops_2024
 ALGORITHM=HS256

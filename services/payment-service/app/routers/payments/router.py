@@ -583,4 +583,28 @@ async def cashfree_webhook(request: Request):
 
 
 
+class MockVerifyIn(BaseModel):
+    amount: float
+    order_id: str
 
+@router.post("/verify")
+async def mock_verify_payment(
+    payload: MockVerifyIn,
+    user=Depends(require_roles(Roles.CUSTOMER)),
+):
+    db = await get_db()
+    customer_id = user.get("customer_id") or user.get("_id")
+    if customer_id is None:
+        raise HTTPException(status_code=401, detail="Missing customer id in session")
+    amt = float(payload.amount or 0)
+    if amt <= 0:
+        raise HTTPException(status_code=400, detail="amount must be > 0")
+    txn = await credit_wallet(customer_id, amt, f"Mock payment - order {payload.order_id}")
+    await db.cashfree_payments.update_one(
+        {"order_id": payload.order_id, "customer_id": customer_id},
+        {"$set": {"status": "succeeded", "order_status": "PAID",
+                  "completed_at": datetime.utcnow(), "wallet_txn": txn,
+                  "updated_at": datetime.utcnow()}},
+    )
+    return {"ok": True, "paid": True, "order_id": payload.order_id,
+            "amount": amt, "wallet_txn": txn, "mock": True}

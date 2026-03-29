@@ -2,51 +2,51 @@
   {
     "name": "auth-service",
     "port": 3001,
-    "pid": 15600
+    "pid": 19612
   },
   {
     "name": "loan-service",
     "port": 3002,
-    "pid": 29136
+    "pid": 24460
   },
   {
     "name": "emi-service",
     "port": 3003,
-    "pid": 19568
+    "pid": 19944
   },
   {
     "name": "wallet-service",
     "port": 3004,
-    "pid": 17372
+    "pid": 20812
   },
   {
     "name": "payment-service",
     "port": 3005,
-    "pid": 28784
+    "pid": 21624
   },
   {
     "name": "verification-service",
     "port": 3006,
-    "pid": 22756
+    "pid": 24856
   },
   {
     "name": "admin-service",
     "port": 3007,
-    "pid": 16568
+    "pid": 2220
   },
   {
     "name": "manager-service",
     "port": 3008,
-    "pid": 26596
+    "pid": 19860
   },
   {
     "name": "api-gateway",
     "port": 3000,
-    "pid": 6748
+    "pid": 25404
   },
   {
     "name": "frontend",
     "port": 5173,
-    "pid": 16880
+    "pid": 17288
   }
 ]

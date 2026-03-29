@@ -1,4 +1,3 @@
-
 from ..database.mongo import get_db
 from ..models.enums import LoanStatus
 from ..utils.serializers import normalize_doc
@@ -19,7 +18,6 @@ def _sanitize_loan_doc(doc: dict) -> dict:
         out["pan_masked"] = _mask_pan(out.get("pan_number"))
     if not out.get("guarantor_pan_masked"):
         out["guarantor_pan_masked"] = _mask_pan(out.get("guarantor_pan"))
-
     out.pop("pan_number", None)
     out.pop("guarantor_pan", None)
     out.pop("pan_hash", None)
@@ -29,10 +27,9 @@ def _sanitize_loan_doc(doc: dict) -> dict:
 
 async def get_loans_for_manager():
     db = await get_db()
-    # Manager console needs both pending queues and recently processed items.
-    # Return a broader set of statuses; the UI will group them into sections.
     manager_statuses = [
         LoanStatus.APPLIED,
+        LoanStatus.ASSIGNED_TO_VERIFICATION,
         LoanStatus.VERIFICATION_DONE,
         LoanStatus.MANAGER_APPROVED,
         LoanStatus.PENDING_ADMIN_APPROVAL,
@@ -45,21 +42,25 @@ async def get_loans_for_manager():
         LoanStatus.FORECLOSED,
         LoanStatus.DISBURSED,
         LoanStatus.REJECTED,
+        # String statuses set by verification-service
+        "verified",
+        "verification_rejected",
+        "assigned_to_verification",
+        "pending_admin_approval",
     ]
-
-    loans = await db.personal_loans.find({"status": {"$in": manager_statuses}}).sort("applied_at", -1).to_list(length=400)
-    loans += await db.vehicle_loans.find({"status": {"$in": manager_statuses}}).sort("applied_at", -1).to_list(length=400)
-    loans += await db.education_loans.find({"status": {"$in": manager_statuses}}).sort("applied_at", -1).to_list(length=400)
-    loans += await db.home_loans.find({"status": {"$in": manager_statuses}}).sort("applied_at", -1).to_list(length=400)
+    loans = []
+    for col in ["personal_loans", "vehicle_loans", "education_loans", "home_loans"]:
+        loans += await db[col].find(
+            {"status": {"$in": manager_statuses}}
+        ).sort("applied_at", -1).to_list(length=400)
     return [_sanitize_loan_doc(l) for l in loans]
 
 
 async def list_pending_signature_verifications():
     db = await get_db()
-    loans = await db.personal_loans.find({"status": LoanStatus.SIGNED_RECEIVED}).to_list(length=200)
-    loans += await db.vehicle_loans.find({"status": LoanStatus.SIGNED_RECEIVED}).to_list(length=200)
-    loans += await db.education_loans.find({"status": LoanStatus.SIGNED_RECEIVED}).to_list(length=200)
-    loans += await db.home_loans.find({"status": LoanStatus.SIGNED_RECEIVED}).to_list(length=200)
+    loans = []
+    for col in ["personal_loans", "vehicle_loans", "education_loans", "home_loans"]:
+        loans += await db[col].find({"status": LoanStatus.SIGNED_RECEIVED}).to_list(length=200)
     return [_sanitize_loan_doc(l) for l in loans]
 
 
@@ -68,6 +69,5 @@ async def list_verification_team(active_only: bool = True):
     query: dict = {"role": "verification"}
     if active_only:
         query["is_active"] = True
-
     members = await db.staff_users.find(query, {"password": 0}).sort("full_name", 1).to_list(length=300)
     return [normalize_doc(m) for m in members]
