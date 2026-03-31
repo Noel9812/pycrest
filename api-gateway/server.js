@@ -7,15 +7,11 @@ const morgan = require('morgan');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// ── CORS preflight — MUST be first, before any proxy middleware ───────────────
-// http-proxy-middleware intercepts OPTIONS before cors() can respond,
-// so we handle preflight manually here with an unconditional 204.
+// 1. Manual Preflight Handling (Crucial for Proxy overlap)
 app.use((req, res, next) => {
   if (req.method === 'OPTIONS') {
-    const origin = req.headers.origin;
-    if (origin) {
-      res.setHeader('Access-Control-Allow-Origin', origin);
-    }
+    const origin = req.headers.origin || '*';
+    res.setHeader('Access-Control-Allow-Origin', origin);
     res.setHeader('Access-Control-Allow-Credentials', 'true');
     res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization,Idempotency-Key,X-Internal-Token');
@@ -25,36 +21,11 @@ app.use((req, res, next) => {
   next();
 });
 
-// ── CORS for non-preflight requests ──────────────────────────────────────────
-const allowedOrigins = [
-  'http://localhost:5173',
-  'http://localhost:5174',
-  'http://localhost:5175',
-  'http://44.223.16.184',
-  'http://44.223.16.184:80',
-];
-
-if (process.env.FRONTEND_ORIGIN) {
-  const origin = process.env.FRONTEND_ORIGIN;
-  if (!allowedOrigins.includes(origin)) {
-    allowedOrigins.push(origin);
-  }
-}
-
+// 2. Dynamic CORS for standard requests
 const corsOptions = {
   origin: (origin, callback) => {
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.includes(origin)) return callback(null, true);
-    try {
-      const frontendHost = process.env.FRONTEND_ORIGIN
-        ? new URL(process.env.FRONTEND_ORIGIN).hostname
-        : null;
-      const originHost = new URL(origin).hostname;
-      if (frontendHost && originHost && frontendHost === originHost) {
-        return callback(null, true);
-      }
-    } catch (e) {}
-    callback(new Error(`CORS: origin ${origin} not allowed`));
+    // This allows every origin that hits the gateway
+    callback(null, true); 
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
@@ -63,7 +34,7 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
-// ── Logging ───────────────────────────────────────────────────────────────────
+// 3. Logging
 app.use(morgan('[:date[iso]] [GATEWAY] :method :url -> :status | :response-time ms'));
 
 // ── Health check ──────────────────────────────────────────────────────────────
@@ -128,5 +99,5 @@ for (const [pathPrefix, targetUrl] of Object.entries(routes)) {
 // ── Start ─────────────────────────────────────────────────────────────────────
 app.listen(PORT, () => {
   console.log(`\n🚀 API Gateway is running on http://localhost:${PORT}`);
-  console.log(`Front-end allowed origins: ${allowedOrigins.join(', ')}`);
+  console.log(`CORS is configured to dynamically allow all incoming origins.`);
 });

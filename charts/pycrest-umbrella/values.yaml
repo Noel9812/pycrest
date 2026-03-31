@@ -9,7 +9,6 @@ global:
     server: "10.0.1.27"
     basePath: /var/nfs/pycrest
 
-  domain: "35.174.242.174"
 
   gateway:
     name: pycrest-gateway

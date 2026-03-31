@@ -49,8 +49,6 @@ spec:
           env:
             - name: PORT
               value: "3000"
-            - name: FRONTEND_ORIGIN
-              value: "http://{{ .Values.global.domain }}"
           envFrom:
             - secretRef:
                 name: pycrest-global-secret
