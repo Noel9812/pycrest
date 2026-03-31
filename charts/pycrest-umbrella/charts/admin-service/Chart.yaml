@@ -1,0 +1,12 @@
+apiVersion: v2
+name: admin-service
+description: >
+  PayCrest Admin Service — handles loan approvals, staff management,
+  audit logs, support tickets, system settings, and sanction letter generation.
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+dependencies:
+  - name: common
+    version: "1.0.0"
+    repository: "file://../common"

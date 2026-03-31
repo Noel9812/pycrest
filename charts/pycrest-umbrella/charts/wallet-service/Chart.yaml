@@ -1,0 +1,12 @@
+apiVersion: v2
+name: wallet-service
+description: >
+  PayCrest Wallet Service — wallet balance, transactions, MPIN setup/verify,
+  internal credit/debit for inter-service calls, and wallet top-up.
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+dependencies:
+  - name: common
+    version: "1.0.0"
+    repository: "file://../common"

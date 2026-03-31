@@ -1,0 +1,12 @@
+apiVersion: v2
+name: auth-service
+description: >
+  PayCrest Auth Service — handles user registration, login, JWT token
+  issuance, /me endpoint, and staff authentication.
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+dependencies:
+  - name: common
+    version: "1.0.0"
+    repository: "file://../common"

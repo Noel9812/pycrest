@@ -1,0 +1,79 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mongodb
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app.kubernetes.io/name: mongodb
+    app.kubernetes.io/part-of: pycrest
+spec:
+  serviceName: mongodb
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mongodb
+  template:
+    metadata:
+      labels:
+        app: mongodb
+        app.kubernetes.io/part-of: pycrest
+    spec:
+      serviceAccountName: mongodb-sa
+      securityContext:
+        fsGroup: 999
+      containers:
+        - name: mongodb
+          # Use the sub-chart scoped value, not .Values.image (that doesn't exist at this level)
+          image: "mongo:{{ .Values.mongodb.image.tag | default "7.0" }}"
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 27017
+              name: mongo
+          env:
+            - name: MONGO_INITDB_ROOT_USERNAME
+              value: {{ .Values.global.mongodb.rootUser | quote }}
+            - name: MONGO_INITDB_ROOT_PASSWORD
+              value: {{ .Values.global.mongodb.rootPassword | quote }}
+            - name: MONGO_INITDB_DATABASE
+              value: {{ .Values.global.mongodb.db | quote }}
+          livenessProbe:
+            exec:
+              command:
+                - mongosh
+                - "--eval"
+                - "db.adminCommand('ping')"
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            exec:
+              command:
+                - mongosh
+                - "--eval"
+                - "db.adminCommand('ping')"
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            timeoutSeconds: 5
+            # ← was missing in your version
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: 1000m
+              memory: 2Gi
+          volumeMounts:
+            - name: mongo-data
+              mountPath: /data/db
+  volumeClaimTemplates:
+    - metadata:
+        name: mongo-data
+        namespace: {{ .Values.global.namespace }}
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: {{ .Values.global.storageClassName }}
+        resources:
+          requests:
+            storage: {{ .Values.mongodb.storage.size | default "10Gi" }}

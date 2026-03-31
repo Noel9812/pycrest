@@ -1,0 +1,27 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: manager-service-role
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "common.labels" . | nindent 4 }}
+rules:
+  - apiGroups: [""]
+    resources: ["configmaps", "secrets"]
+    verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: manager-service-rolebinding
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "common.labels" . | nindent 4 }}
+subjects:
+  - kind: ServiceAccount
+    name: manager-service-sa
+    namespace: {{ .Values.global.namespace }}
+roleRef:
+  kind: Role
+  apiGroup: rbac.authorization.k8s.io
+  name: manager-service-role
