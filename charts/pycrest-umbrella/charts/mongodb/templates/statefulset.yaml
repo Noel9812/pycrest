@@ -23,7 +23,7 @@ spec:
         fsGroup: 999
       containers:
         - name: mongodb
-          image: "mongo:{{ .Values.mongodb.image.tag | default "7.0" }}"
+          image: "{{ .Values.mongodb.image.repository }}:{{ .Values.mongodb.image.tag }}"
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 27017
@@ -73,4 +73,4 @@ spec:
         storageClassName: {{ .Values.global.storageClassName }}
         resources:
           requests:
-            storage: {{ .Values.storage.size | default "10Gi" }}
+            storage: {{ .Values.mongodb.storage.size | default "10Gi" }}
