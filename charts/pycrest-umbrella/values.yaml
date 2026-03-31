@@ -82,15 +82,15 @@ frontend:
   resources:
     requests:
       cpu: 100m
-      memory: 128Mi
+      memory: 256Mi      # raised from 128Mi
     limits:
       cpu: 500m
       memory: 512Mi
   hpa:
     minReplicas: 1
-    maxReplicas: 4
+    maxReplicas: 3        # lowered from 4
     cpuThreshold: 70
-    memoryThreshold: 80
+    memoryThreshold: 85   # raised from 80
 
 "auth-service":
   image:
@@ -101,15 +101,15 @@ frontend:
   resources:
     requests:
       cpu: 100m
-      memory: 128Mi
+      memory: 256Mi      # raised from 128Mi
     limits:
       cpu: 500m
       memory: 512Mi
   hpa:
     minReplicas: 2
-    maxReplicas: 6
+    maxReplicas: 4        # lowered from 6
     cpuThreshold: 70
-    memoryThreshold: 80
+    memoryThreshold: 85   # raised from 80
 
 "emi-service":
   image:
@@ -120,15 +120,15 @@ frontend:
   resources:
     requests:
       cpu: 100m
-      memory: 128Mi
+      memory: 256Mi      # raised from 128Mi
     limits:
       cpu: 500m
       memory: 512Mi
   hpa:
     minReplicas: 1
-    maxReplicas: 4
+    maxReplicas: 3        # lowered from 4
     cpuThreshold: 70
-    memoryThreshold: 80
+    memoryThreshold: 85   # raised from 80
 
 "loan-service":
   image:
@@ -139,15 +139,15 @@ frontend:
   resources:
     requests:
       cpu: 200m
-      memory: 256Mi
+      memory: 384Mi      # raised from 256Mi
     limits:
       cpu: 1000m
       memory: 1Gi
   hpa:
     minReplicas: 2
-    maxReplicas: 6
+    maxReplicas: 4        # lowered from 6
     cpuThreshold: 70
-    memoryThreshold: 80
+    memoryThreshold: 85   # raised from 80
 
 "manager-service":
   image:
@@ -158,15 +158,15 @@ frontend:
   resources:
     requests:
       cpu: 100m
-      memory: 128Mi
+      memory: 256Mi      # raised from 128Mi
     limits:
       cpu: 500m
       memory: 512Mi
   hpa:
     minReplicas: 1
-    maxReplicas: 4
+    maxReplicas: 3        # lowered from 4
     cpuThreshold: 70
-    memoryThreshold: 80
+    memoryThreshold: 85   # raised from 80
 
 "payment-service":
   image:
@@ -177,15 +177,15 @@ frontend:
   resources:
     requests:
       cpu: 100m
-      memory: 128Mi
+      memory: 256Mi      # raised from 128Mi
     limits:
       cpu: 500m
       memory: 512Mi
   hpa:
     minReplicas: 2
-    maxReplicas: 6
+    maxReplicas: 4        # lowered from 6
     cpuThreshold: 70
-    memoryThreshold: 80
+    memoryThreshold: 85   # raised from 80
 
 "verification-service":
   image:
@@ -196,15 +196,15 @@ frontend:
   resources:
     requests:
       cpu: 100m
-      memory: 128Mi
+      memory: 256Mi      # raised from 128Mi
     limits:
       cpu: 500m
       memory: 512Mi
   hpa:
     minReplicas: 1
-    maxReplicas: 4
+    maxReplicas: 3        # lowered from 4
     cpuThreshold: 70
-    memoryThreshold: 80
+    memoryThreshold: 85   # raised from 80
 
 "wallet-service":
   image:
@@ -215,12 +215,12 @@ frontend:
   resources:
     requests:
       cpu: 100m
-      memory: 128Mi
+      memory: 256Mi      # raised from 128Mi
     limits:
       cpu: 500m
       memory: 512Mi
   hpa:
     minReplicas: 2
-    maxReplicas: 6
+    maxReplicas: 4        # lowered from 6
     cpuThreshold: 70
-    memoryThreshold: 80
+    memoryThreshold: 85   # raised from 80
