@@ -32,7 +32,8 @@ ServiceAccount name convention: <chart-name>-sa
 {{- end }}
 
 {{/*
-Full image reference — respects global registry override
+Full image reference — respects global registry override.
+If imageRegistry is empty, just uses repository:tag directly.
 Usage: {{ include "common.image" . }}
 */}}
 {{- define "common.image" -}}
@@ -78,8 +79,8 @@ Add to spec.volumes for services that handle file uploads.
 
 {{/*
 Standard RollingUpdate strategy.
-maxUnavailable: 1 means at most 1 pod down during update.
-maxSurge: 1 means at most 1 extra pod spun up during update.
+maxUnavailable: 1 — at most 1 pod down during a rolling update.
+maxSurge: 1       — at most 1 extra pod created during a rolling update.
 */}}
 {{- define "common.rollingUpdateStrategy" -}}
 type: RollingUpdate
@@ -90,7 +91,7 @@ rollingUpdate:
 
 {{/*
 Pod anti-affinity — prefer spreading pods across different nodes.
-Pass the service name as the argument.
+Prevents all replicas of a service landing on the same worker node.
 Usage: {{ include "common.podAntiAffinity" . }}
 */}}
 {{- define "common.podAntiAffinity" -}}
@@ -104,10 +105,9 @@ podAntiAffinity:
         topologyKey: kubernetes.io/hostname
 {{- end }}
 
-
-
 {{/*
-Standard liveness probe on /health for Python uvicorn services (port 8000)
+Standard liveness probe on /health for Python uvicorn services (port 8000).
+Kubernetes will restart the container if this fails failureThreshold times.
 */}}
 {{- define "common.livenessProbe" -}}
 httpGet:
@@ -120,7 +120,8 @@ failureThreshold: 3
 {{- end }}
 
 {{/*
-Standard readiness probe on /health for Python uvicorn services (port 8000)
+Standard readiness probe on /health for Python uvicorn services (port 8000).
+Kubernetes will stop sending traffic to the pod if this fails.
 */}}
 {{- define "common.readinessProbe" -}}
 httpGet:
@@ -133,7 +134,13 @@ failureThreshold: 3
 {{- end }}
 
 {{/*
-minReadySeconds — how long a pod must be Ready before deployment counts it available.
-Prevents sending traffic to pods that haven't fully warmed up.
-Default: 10 seconds. Override per-service in values.yaml.
+minReadySeconds — how long a pod must stay Ready before the Deployment
+counts it as "available" and proceeds with the next rolling update step.
+Prevents sending traffic to pods that started but haven't fully warmed up.
+Default: 10 seconds. Override per-service in values.yaml via minReadySeconds.
+Usage in deployment.yaml:
+  minReadySeconds: {{ include "common.minReadySeconds" . }}
 */}}
+{{- define "common.minReadySeconds" -}}
+{{- .Values.minReadySeconds | default 10 }}
+{{- end }}
