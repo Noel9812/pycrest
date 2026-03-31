@@ -23,7 +23,7 @@ spec:
         fsGroup: 999
       containers:
         - name: mongodb
-          image: "mongo:{{ .Values.image.tag | default "7.0" }}"
+          image: "mongo:{{ .Values.mongodb.image.tag | default "7.0" }}"
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 27017
