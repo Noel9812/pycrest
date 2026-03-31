@@ -23,8 +23,7 @@ spec:
         fsGroup: 999
       containers:
         - name: mongodb
-          # Use the sub-chart scoped value, not .Values.image (that doesn't exist at this level)
-          image: "mongo:{{ .Values.mongodb.image.tag | default "7.0" }}"
+          image: "mongo:{{ .Values.image.tag | default "7.0" }}"
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 27017
@@ -55,7 +54,6 @@ spec:
             initialDelaySeconds: 15
             periodSeconds: 10
             timeoutSeconds: 5
-            # ← was missing in your version
             failureThreshold: 3
           resources:
             requests:
@@ -70,10 +68,9 @@ spec:
   volumeClaimTemplates:
     - metadata:
         name: mongo-data
-        namespace: {{ .Values.global.namespace }}
       spec:
         accessModes: ["ReadWriteOnce"]
         storageClassName: {{ .Values.global.storageClassName }}
         resources:
           requests:
-            storage: {{ .Values.mongodb.storage.size | default "10Gi" }}
+            storage: {{ .Values.storage.size | default "10Gi" }}
