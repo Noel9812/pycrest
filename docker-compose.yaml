@@ -365,7 +365,7 @@ services:
       args:
         # Vite bakes this URL at BUILD time into the JS bundle
         # Must point to wherever your API gateway is reachable FROM THE BROWSER
-        VITE_API_BASE_URL: http://44.223.16.184:3000/api
+        VITE_API_BASE_URL: /api
     container_name: paycrest-frontend
     restart: unless-stopped
     ports:
