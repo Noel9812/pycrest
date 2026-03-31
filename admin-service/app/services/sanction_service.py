@@ -1,8 +1,8 @@
 """
-loan-service/app/services/sanction_service.py
+admin-service/app/services/sanction_service.py
 
-Handles PDF document storage for sanction letters and NOC documents.
-Stores binary data in MongoDB GridFS-style documents collection.
+Local stub that writes PDF documents to the shared MongoDB `documents`
+collection — the same collection loan-service reads from.
 """
 from datetime import datetime
 from bson import ObjectId
@@ -10,10 +10,10 @@ from ..database.mongo import get_db
 
 
 async def store_pdf_document(
-    customer_id,        # ← move this up
+    customer_id,
     doc_type: str,
     filename: str,
-    data: bytes,        # ← rename from pdf_bytes to data
+    data: bytes,
     metadata: dict | None = None,
 ) -> str:
     """
