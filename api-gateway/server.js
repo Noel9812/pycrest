@@ -7,7 +7,25 @@ const morgan = require('morgan');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// ── CORS ─────────────────────────────────────────────────────────────────────
+// ── CORS preflight — MUST be first, before any proxy middleware ───────────────
+// http-proxy-middleware intercepts OPTIONS before cors() can respond,
+// so we handle preflight manually here with an unconditional 204.
+app.use((req, res, next) => {
+  if (req.method === 'OPTIONS') {
+    const origin = req.headers.origin;
+    if (origin) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+    }
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization,Idempotency-Key,X-Internal-Token');
+    res.setHeader('Access-Control-Max-Age', '86400');
+    return res.sendStatus(204);
+  }
+  next();
+});
+
+// ── CORS for non-preflight requests ──────────────────────────────────────────
 const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:5174',
@@ -25,30 +43,17 @@ if (process.env.FRONTEND_ORIGIN) {
 
 const corsOptions = {
   origin: (origin, callback) => {
-    if (!origin) {
-      // Allow requests with no origin (curl, Postman, server-to-server)
-      return callback(null, true);
-    }
-
-    if (allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
-
-    // Also allow if origin hostname matches FRONTEND_ORIGIN hostname
-    // This handles http://IP vs http://IP:80 mismatches
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) return callback(null, true);
     try {
       const frontendHost = process.env.FRONTEND_ORIGIN
         ? new URL(process.env.FRONTEND_ORIGIN).hostname
         : null;
       const originHost = new URL(origin).hostname;
-
       if (frontendHost && originHost && frontendHost === originHost) {
         return callback(null, true);
       }
-    } catch (e) {
-      // invalid URL, fall through to rejection
-    }
-
+    } catch (e) {}
     callback(new Error(`CORS: origin ${origin} not allowed`));
   },
   credentials: true,
@@ -57,9 +62,6 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
-
-// Handle OPTIONS preflight for ALL routes before proxies touch them
-app.options('*', cors(corsOptions));
 
 // ── Logging ───────────────────────────────────────────────────────────────────
 app.use(morgan('[:date[iso]] [GATEWAY] :method :url -> :status | :response-time ms'));
@@ -90,9 +92,11 @@ const generateProxyOptions = (pathPrefix, targetService) => {
     changeOrigin: true,
     xfwd: true,
     pathRewrite: (path) => path.replace(new RegExp(`^${pathPrefix}`), ''),
-    onError: (err, req, res) => {
-      console.error(`[Proxy Error] ${req.method} ${req.url} -> ${targetService}`, err.message);
-      res.status(503).json({ error: 'Service unavailable', service: targetService, status: 503 });
+    on: {
+      error: (err, req, res) => {
+        console.error(`[Proxy Error] ${req.method} ${req.url} -> ${targetService}`, err.message);
+        res.status(503).json({ error: 'Service unavailable', service: targetService, status: 503 });
+      }
     }
   });
 };
