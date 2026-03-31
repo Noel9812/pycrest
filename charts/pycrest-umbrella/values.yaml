@@ -47,7 +47,7 @@ mongodb:
 "api-gateway":
   image:
     repository: chillmadiguys/api-gateway
-    tag: v1.1.0
+    tag: v1.1.1
   replicaCount: 2
   minReadySeconds: 10
   resources:
