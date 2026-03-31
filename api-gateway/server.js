@@ -12,35 +12,54 @@ const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:5174',
   'http://localhost:5175',
+  'http://44.223.16.184',
+  'http://44.223.16.184:80',
 ];
+
 if (process.env.FRONTEND_ORIGIN) {
-  allowedOrigins.push(process.env.FRONTEND_ORIGIN);
+  const origin = process.env.FRONTEND_ORIGIN;
+  if (!allowedOrigins.includes(origin)) {
+    allowedOrigins.push(origin);
+  }
 }
 
-app.use(cors({
+const corsOptions = {
   origin: (origin, callback) => {
-    // Allow requests with no origin (curl, Postman, server-to-server)
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error(`CORS: origin ${origin} not allowed`));
+    if (!origin) {
+      // Allow requests with no origin (curl, Postman, server-to-server)
+      return callback(null, true);
     }
+
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+
+    // Also allow if origin hostname matches FRONTEND_ORIGIN hostname
+    // This handles http://IP vs http://IP:80 mismatches
+    try {
+      const frontendHost = process.env.FRONTEND_ORIGIN
+        ? new URL(process.env.FRONTEND_ORIGIN).hostname
+        : null;
+      const originHost = new URL(origin).hostname;
+
+      if (frontendHost && originHost && frontendHost === originHost) {
+        return callback(null, true);
+      }
+    } catch (e) {
+      // invalid URL, fall through to rejection
+    }
+
+    callback(new Error(`CORS: origin ${origin} not allowed`));
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Idempotency-Key', 'X-Internal-Token'],
-}));
+};
+
+app.use(cors(corsOptions));
 
 // Handle OPTIONS preflight for ALL routes before proxies touch them
-app.options('*', cors({
-  origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) callback(null, true);
-    else callback(new Error(`CORS: origin ${origin} not allowed`));
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Idempotency-Key', 'X-Internal-Token'],
-}));
+app.options('*', cors(corsOptions));
 
 // ── Logging ───────────────────────────────────────────────────────────────────
 app.use(morgan('[:date[iso]] [GATEWAY] :method :url -> :status | :response-time ms'));

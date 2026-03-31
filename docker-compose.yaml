@@ -334,9 +334,7 @@ services:
     restart: unless-stopped
     environment:
       PORT: "3000"
-      # Allow requests from frontend (Vite dev server OR nginx)
       FRONTEND_ORIGIN: http://44.223.16.184
-      # All services are on :8000 inside the Docker network
       AUTH_SERVICE_URL: http://auth-service:8000
       LOAN_SERVICE_URL: http://loan-service:8000
       EMI_SERVICE_URL: http://emi-service:8000
