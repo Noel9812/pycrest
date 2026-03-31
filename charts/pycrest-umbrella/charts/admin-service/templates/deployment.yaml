@@ -18,9 +18,6 @@ spec:
       labels:
         {{- include "common.selectorLabels" . | nindent 8 }}
         app.kubernetes.io/part-of: pycrest
-      annotations:
-        # Force pod restart when secret/configmap changes
-        checksum/secret: {{ include (print $.Template.BasePath "/../../templates/global-secret.yaml") . | sha256sum }}
     spec:
       serviceAccountName: admin-service-sa
       securityContext:
