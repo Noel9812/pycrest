@@ -11,8 +11,8 @@ route:
 receivers:
 - name: 'slack-notifications'
   slack_configs:
-  - api_url: 'https://hooks.slack.com/services/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'
-    channel: '#monitoring-alerts'
+  - api_url: 'https://hooks.slack.com/services/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'
+    channel: '#incoming-alerts'
     send_resolved: true
     icon_emoji: ':fire:'
     title: '[{{ .Status | upper }}] {{ .GroupLabels.alertname }}'
