@@ -17,15 +17,10 @@ spec:
     metadata:
       labels:
         {{- include "common.selectorLabels" . | nindent 8 }}
-        app.kubernetes.io/part-of: pycrest
     spec:
       serviceAccountName: admin-service-sa
       securityContext:
         runAsNonRoot: true
-        runAsUser: 1000
-        fsGroup: 1000
-      affinity:
-        {{- include "common.podAntiAffinity" . | nindent 8 }}
       containers:
         - name: admin-service
           image: {{ include "common.image" . }}

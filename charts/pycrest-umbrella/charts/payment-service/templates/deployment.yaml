@@ -17,7 +17,6 @@ spec:
     metadata:
       labels:
         {{- include "common.selectorLabels" . | nindent 8 }}
-        app.kubernetes.io/part-of: pycrest
     spec:
       serviceAccountName: payment-service-sa
       securityContext:
@@ -47,4 +46,4 @@ spec:
             limits:
               cpu: {{ .Values.resources.limits.cpu }}
               memory: {{ .Values.resources.limits.memory }}
-          # payment-service has no file uploads
+   

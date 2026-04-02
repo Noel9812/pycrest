@@ -7,7 +7,7 @@ metadata:
     app.kubernetes.io/name: mongodb
 spec:
   type: ClusterIP
-  clusterIP: None          # Headless — required for StatefulSet DNS
+  clusterIP: None       
   selector:
     app: mongodb
   ports:

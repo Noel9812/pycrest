@@ -8,8 +8,3 @@ parameters:
   share: {{ .Values.global.nfs.basePath | quote }}
 reclaimPolicy: Retain
 volumeBindingMode: Immediate
-mountOptions:
-  - nfsvers=4.1
-  - hard
-  - timeo=600
-  - retrans=3

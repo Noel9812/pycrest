@@ -1,9 +1,7 @@
 apiVersion: v2
 name: loan-service
 description: >
-  PayCrest Loan Service — core loan lifecycle: applications, KYC,
-  document uploads, sanction letters, eligibility, customer portal,
-  foreclosure, NOC generation, and EMI schedule creation.
+  PayCrest Loan Service 
 type: application
 version: 1.0.0
 appVersion: "1.0.0"

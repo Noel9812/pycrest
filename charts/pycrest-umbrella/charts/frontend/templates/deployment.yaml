@@ -21,21 +21,10 @@ spec:
     metadata:
       labels:
         app.kubernetes.io/name: frontend
-        app.kubernetes.io/part-of: pycrest
     spec:
       serviceAccountName: frontend-sa
       securityContext:
-        runAsNonRoot: false    # Nginx needs to bind port 80 — runs as root by default
-        runAsUser: 0
-      affinity:
-        podAntiAffinity:
-          preferredDuringSchedulingIgnoredDuringExecution:
-            - weight: 100
-              podAffinityTerm:
-                labelSelector:
-                  matchLabels:
-                    app.kubernetes.io/name: frontend
-                topologyKey: kubernetes.io/hostname
+        runAsNonRoot: false  
       containers:
         - name: frontend
           image: {{ include "common.image" . }}

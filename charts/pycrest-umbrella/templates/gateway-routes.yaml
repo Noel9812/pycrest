@@ -8,7 +8,6 @@ spec:
     - name: {{ .Values.global.gateway.name }}
       namespace: {{ .Values.global.gateway.namespace }}
   rules:
-    # Health check — served directly by frontend nginx
     - matches:
         - path:
             type: Exact
@@ -16,9 +15,6 @@ spec:
       backendRefs:
         - name: frontend
           port: 80
-
-    # ALL /api/* traffic goes to api-gateway
-    # api-gateway's server.js handles path rewriting to each microservice
     - matches:
         - path:
             type: PathPrefix
@@ -26,8 +22,6 @@ spec:
       backendRefs:
         - name: api-gateway
           port: 3000
-
-    # Frontend SPA — catch-all
     - matches:
         - path:
             type: PathPrefix

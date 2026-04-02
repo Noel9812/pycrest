@@ -1,9 +1,7 @@
 apiVersion: v2
 name: manager-service
 description: >
-  PayCrest Manager Service — manager dashboard, loan queue assignment,
-  verification team management, sanction letter verification, and
-  manager approvals.
+  PayCrest Manager Service 
 type: application
 version: 1.0.0
 appVersion: "1.0.0"

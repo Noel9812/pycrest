@@ -17,15 +17,10 @@ spec:
     metadata:
       labels:
         {{- include "common.selectorLabels" . | nindent 8 }}
-        app.kubernetes.io/part-of: pycrest
     spec:
       serviceAccountName: auth-service-sa
       securityContext:
         runAsNonRoot: true
-        runAsUser: 1000
-        fsGroup: 1000
-      affinity:
-        {{- include "common.podAntiAffinity" . | nindent 8 }}
       containers:
         - name: auth-service
           image: {{ include "common.image" . }}
@@ -47,4 +42,3 @@ spec:
             limits:
               cpu: {{ .Values.resources.limits.cpu }}
               memory: {{ .Values.resources.limits.memory }}
-          # auth-service has no file uploads — no volumeMounts needed

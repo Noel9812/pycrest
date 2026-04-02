@@ -5,10 +5,8 @@ metadata:
   namespace: {{ .Values.global.namespace }}
   labels:
     app.kubernetes.io/name: api-gateway
-    app.kubernetes.io/part-of: pycrest
 spec:
   replicas: {{ .Values.replicaCount | default 2 }}
-  # How long a pod must be Ready before counted as available — prevents premature traffic
   minReadySeconds: {{ include "common.minReadySeconds" . }}
   selector:
     matchLabels:
@@ -22,24 +20,12 @@ spec:
     metadata:
       labels:
         app.kubernetes.io/name: api-gateway
-        app.kubernetes.io/part-of: pycrest
     spec:
       serviceAccountName: api-gateway-sa
       securityContext:
         runAsNonRoot: true
-        runAsUser: 1000
-      affinity:
-        podAntiAffinity:
-          preferredDuringSchedulingIgnoredDuringExecution:
-            - weight: 100
-              podAffinityTerm:
-                labelSelector:
-                  matchLabels:
-                    app.kubernetes.io/name: api-gateway
-                topologyKey: kubernetes.io/hostname
       containers:
         - name: api-gateway
-          # Use common.image helper — handles empty registry correctly
           image: {{ include "common.image" . }}
           imagePullPolicy: {{ .Values.global.imagePullPolicy }}
           ports:

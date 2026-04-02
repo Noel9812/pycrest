@@ -17,7 +17,6 @@ spec:
     metadata:
       labels:
         {{- include "common.selectorLabels" . | nindent 8 }}
-        app.kubernetes.io/part-of: pycrest
     spec:
       serviceAccountName: wallet-service-sa
       securityContext:

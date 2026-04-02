@@ -1,8 +1,7 @@
 apiVersion: v2
 name: payment-service
 description: >
-  PayCrest Payment Service — Cashfree integration, EMI payments,
-  wallet top-up, disbursement, and payment confirmation webhooks.
+  PayCrest Payment Service 
 type: application
 version: 1.0.0
 appVersion: "1.0.0"
